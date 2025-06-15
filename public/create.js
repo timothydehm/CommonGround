@@ -26,8 +26,7 @@ document.getElementById('mapForm').addEventListener('submit', async (e) => {
   const mapId = Math.random().toString(36).substring(2, 10);
 
   // Save to Supabase
-  const { createClient } = await import('@supabase/supabase-js');
-  const supabase = createClient('https://YOUR_PROJECT_ID.supabase.co', 'YOUR_ANON_KEY');
+  const supabase = supabase.createClient('https://YOUR_PROJECT_ID.supabase.co', 'YOUR_ANON_KEY');
 
   const { error } = await supabase
     .from('maps')
