@@ -1,0 +1,24 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "sample-parcel-1",
+        "name": "Sample Parcel"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-74.006, 40.7128],
+            [-74.006, 40.7129],
+            [-74.005, 40.7129],
+            [-74.005, 40.7128],
+            [-74.006, 40.7128]
+          ]
+        ]
+      }
+    }
+  ]
+} 
