@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create Map</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Create a Voting Map</h1>
+
+  <form id="mapForm">
+    <label for="mapTitle">Map Title:</label>
+    <input type="text" id="mapTitle" required />
+
+    <label for="mapPrompt">Prompt / Instructions:</label>
+    <textarea id="mapPrompt" rows="4" required></textarea>
+
+    <label for="geojsonFile">Upload GeoJSON File:</label>
+    <input type="file" id="geojsonFile" accept=".geojson" required />
+
+    <button type="submit">Create Map</button>
+  </form>
+
+  <script type="module" src="create.js"></script>
+</body>
+</html> 
