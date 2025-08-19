@@ -19,7 +19,8 @@ const urlParams = new URLSearchParams(window.location.search);
 const mapId = urlParams.get('id');
 
 if (!mapId) {
-  alert('No map ID provided');
+  // Load sample data if no map ID provided
+  loadSampleData();
 } else {
   // Load map data from Supabase
   loadMapData(mapId);
@@ -56,6 +57,8 @@ function getColorByVotes(voteCount, maxVotes) {
 }
 
 async function loadVotesAndUpdateStyles() {
+  if (!mapId) return; // Skip if no map ID (sample mode)
+  
   try {
     const { data: votes, error: voteError } = await supabaseClient
       .from('votes')
@@ -80,6 +83,44 @@ async function loadVotesAndUpdateStyles() {
     }
   } catch (error) {
     console.error('Error updating vote styles:', error);
+  }
+}
+
+async function loadSampleData() {
+  try {
+    // Load sample GeoJSON data
+    const response = await fetch('parcels.geojson');
+    const data = await response.json();
+    
+    // Set default title and prompt
+    document.title = 'Sample Voting Map';
+    document.getElementById('map-title').textContent = 'Sample Voting Map';
+    document.getElementById('map-prompt').textContent = 'Click on parcels to vote. This is a sample map.';
+
+    // Add GeoJSON to map
+    const geojsonLayer = L.geoJSON(data, {
+      style: {
+        color: '#999999',  // darker grey border for better visibility
+        weight: 1.5,       // slightly thicker border
+        fillColor: '#ffffff',  // pure white fill
+        fillOpacity: 1
+      },
+      onEachFeature: function(feature, layer) {
+        const parcelId = feature.properties.id || feature.id;
+        layerMap[parcelId] = layer;
+
+        layer.on('click', function() {
+          alert('This is a sample map. Create a real map to enable voting.');
+        });
+      }
+    }).addTo(map);
+
+    // Fit map to GeoJSON bounds
+    map.fitBounds(geojsonLayer.getBounds());
+
+  } catch (error) {
+    console.error('Error loading sample data:', error);
+    alert('Error loading sample data: ' + error.message);
   }
 }
 
