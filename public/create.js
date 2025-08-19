@@ -1,5 +1,11 @@
 // create.js
 
+// Initialize Supabase client once
+const supabaseClient = window.supabase.createClient(
+  'https://ziidawfildpacymfddqh.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppaWRhd2ZpbGRwYWN5bWZkZHFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk5MzM0NzQsImV4cCI6MjA2NTUwOTQ3NH0.AsyZJu6fcpvGDhHqak37q1LV4VDmfPvyDLDaU3b1tR4'
+);
+
 document.getElementById('mapForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -23,21 +29,30 @@ document.getElementById('mapForm').addEventListener('submit', async (e) => {
   }
 
   // Generate a unique ID for the map
-  const mapId = Math.random().toString(36).substring(2, 10);
+  const mapId = 'map_' + Date.now().toString(36);
 
-  // Save to Supabase
-  const supabase = supabase.createClient('https://YOUR_PROJECT_ID.supabase.co', 'YOUR_ANON_KEY');
+  try {
+    const { data, error } = await supabaseClient
+      .from('maps')
+      .insert({
+        id: mapId,
+        title: title,
+        prompt: prompt,
+        geojson: geojson
+      })
+      .select();
 
-  const { error } = await supabase
-    .from('maps')
-    .insert([{ id: mapId, title, prompt, geojson }]);
+    if (error) {
+      console.error('Supabase error:', error);
+      alert('Error saving map to database: ' + error.message);
+      return;
+    }
 
-  if (error) {
-    alert('Error saving map to database.');
-    console.error(error);
-    return;
+    console.log('Successfully created map:', data);
+    // Redirect to voting map
+    window.location.href = `map.html?id=${mapId}`;
+  } catch (err) {
+    console.error('Error:', err);
+    alert('Error connecting to database. Please try again.');
   }
-
-  // Redirect to voting map
-  window.location.href = `map.html?id=${mapId}`;
 }); 
