@@ -49,7 +49,7 @@ function getVoteCounts(votes) {
 }
 
 function getColorByVotes(voteCount, maxVotes) {
-  if (!maxVotes) return '#ffffff';  // pure white for no votes
+  if (voteCount === 0) return '#ffffff';  // white for no votes
   const scale = voteCount / maxVotes;
   const opacity = 0.1 + scale * 0.9;
   return `rgba(0, 0, 0, ${opacity})`; // black, scaled opacity
@@ -122,30 +122,25 @@ async function loadMapData(mapId) {
 
           try {
             // Check if user has already voted for this parcel
-            const { data: existingVote, error: checkError } = await supabaseClient
+            const { data: existingVotes, error: checkError } = await supabaseClient
               .from('votes')
-              .select()
-              .match({
-                map_id: mapId,
-                parcel_id: parcelId,
-                username: username
-              })
-              .single();
+              .select('*')
+              .filter('map_id', 'eq', mapId)
+              .filter('parcel_id', 'eq', parcelId)
+              .filter('username', 'eq', username);
 
-            if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+            if (checkError) {
               throw checkError;
             }
 
-            if (existingVote) {
+            if (existingVotes && existingVotes.length > 0) {
               // Remove vote
               const { error: deleteError } = await supabaseClient
                 .from('votes')
                 .delete()
-                .match({
-                  map_id: mapId,
-                  parcel_id: parcelId,
-                  username: username
-                });
+                .filter('map_id', 'eq', mapId)
+                .filter('parcel_id', 'eq', parcelId)
+                .filter('username', 'eq', username);
 
               if (deleteError) throw deleteError;
             } else {
