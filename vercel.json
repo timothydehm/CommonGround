@@ -9,7 +9,7 @@
   "routes": [
     {
       "src": "/",
-      "dest": "/public/map.html"
+      "dest": "/public/create.html"
     },
     {
       "src": "/create",

@@ -10,6 +10,22 @@ body {
   flex-direction: column;
 }
 
+.nav {
+  padding: 15px 20px;
+  background-color: #f0f0f0;
+  border-bottom: 1px solid #ddd;
+}
+
+.nav-link {
+  color: #0057e7;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.nav-link:hover {
+  text-decoration: underline;
+}
+
 #info-panel {
   padding: 20px;
   background-color: #f8f8f8;
