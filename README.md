@@ -9,7 +9,7 @@ A simple, efficient voting map application for collaborative land use planning. 
 - **Visual Feedback**: Vote counts displayed as color intensity on the map
 - **Personal Vote View**: Toggle between all votes and your own votes only
 - **Share Maps**: Copy direct links to share voting maps
-- **Export Results**: Download GeoJSON with voting data included
+- **Export Results**: Download GeoJSON with detailed voting data and voter identification
 
 ## Architecture
 
@@ -45,7 +45,7 @@ A simple, efficient voting map application for collaborative land use planning. 
 4. Share the generated link for voting
 5. Users click parcels to vote with real-time updates
 6. Use the toggle button to view only your own votes
-7. Export voting results as GeoJSON with vote counts included
+7. Export detailed voting results with voter identification
 
 ## Voting Features
 
@@ -62,14 +62,23 @@ A simple, efficient voting map application for collaborative land use planning. 
 
 ## Export Format
 
-The exported GeoJSON includes:
+The exported GeoJSON includes comprehensive voting data for transparency and analysis:
+
+### **Per-Parcel Data**
 - **Original parcel data** with all properties preserved
 - **Vote counts** (`vote_count`) for each parcel
 - **Vote percentages** (`vote_percentage`) relative to the most voted parcel
 - **Vote indicators** (`has_votes`) boolean flag
-- **Metadata** with map info, totals, and export date
+- **Voter details** (`voters`) array with usernames and timestamps
+- **Voter count** (`voter_count`) number of unique voters per parcel
 
-Example exported feature:
+### **Metadata & Analysis**
+- **Map information**: title, prompt, totals
+- **Voter summary**: activity levels, participation statistics
+- **Voting patterns**: clusters, collaboration indicators
+- **Stakeholder identification**: high-activity users, focused voters
+
+### **Example Exported Feature**
 ```json
 {
   "type": "Feature",
@@ -78,10 +87,29 @@ Example exported feature:
     "PARCELID": "12345",
     "vote_count": 5,
     "vote_percentage": 100.0,
-    "has_votes": true
+    "has_votes": true,
+    "voters": [
+      {"username": "council_member_jones", "voted_at": "2024-01-15T10:30:00.000Z"},
+      {"username": "resident_smith", "voted_at": "2024-01-15T11:15:00.000Z"}
+    ],
+    "voter_count": 2
   }
 }
 ```
+
+### **Stakeholder Analysis**
+The export includes detailed analysis to identify:
+- **High-activity users**: Users with many votes across multiple parcels
+- **Focused voters**: Users voting on specific areas (potential stakeholders)
+- **Voting clusters**: Parcels with multiple voters (collaboration indicators)
+- **Bad actor detection**: Unusual voting patterns or excessive activity
+
+### **Use Cases for Detailed Export**
+- **Transparency**: See exactly who voted for what
+- **Stakeholder identification**: Identify council members, developers, residents
+- **Pattern analysis**: Detect voting clusters or coordinated efforts
+- **Accountability**: Track individual voting behavior
+- **Collaboration mapping**: Find areas of agreement/disagreement
 
 ## Dependencies
 

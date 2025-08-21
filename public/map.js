@@ -119,17 +119,19 @@ async function exportGeoJSON() {
       return;
     }
 
-    // Calculate vote counts
+    // Calculate vote counts and collect voter details
     const voteCounts = getVoteCounts(votes);
+    const voterDetails = getVoterDetails(votes);
     const maxVotes = Math.max(...Object.values(voteCounts), 0);
 
-    // Create export data with vote counts
+    // Create export data with vote counts and voter details
     const exportData = {
       type: 'FeatureCollection',
       features: mapData.geojson.features.map(feature => {
         const parcelId = feature.properties.PARCELID || feature.properties.id || feature.id;
         const voteCount = voteCounts[parcelId] || 0;
         const votePercentage = maxVotes > 0 ? (voteCount / maxVotes * 100).toFixed(1) : 0;
+        const voters = voterDetails[parcelId] || [];
         
         return {
           ...feature,
@@ -137,7 +139,9 @@ async function exportGeoJSON() {
             ...feature.properties,
             vote_count: voteCount,
             vote_percentage: parseFloat(votePercentage),
-            has_votes: voteCount > 0
+            has_votes: voteCount > 0,
+            voters: voters,
+            voter_count: voters.length
           }
         };
       }),
@@ -147,8 +151,14 @@ async function exportGeoJSON() {
         total_votes: votes.length,
         total_parcels: mapData.geojson.features.length,
         parcels_with_votes: Object.keys(voteCounts).length,
+        unique_voters: getUniqueVoters(votes).length,
         export_date: new Date().toISOString(),
-        max_votes_per_parcel: maxVotes
+        max_votes_per_parcel: maxVotes,
+        voting_analysis: {
+          voter_summary: getVoterSummary(votes),
+          voting_patterns: getVotingPatterns(votes),
+          stakeholder_identification: getStakeholderIdentification(votes)
+        }
       }
     };
 
@@ -157,13 +167,13 @@ async function exportGeoJSON() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${mapData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_voting_results.geojson`;
+    a.download = `${mapData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_voting_results_detailed.geojson`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    showSuccess('Voting results exported successfully!');
+    showSuccess('Detailed voting results exported successfully!');
   } catch (error) {
     console.error('Error exporting GeoJSON:', error);
     showError('Error exporting voting results');
@@ -189,6 +199,158 @@ function getVoteCounts(votes) {
     counts[vote.parcel_id] = (counts[vote.parcel_id] || 0) + 1;
     return counts;
   }, {});
+}
+
+// Get detailed voter information for each parcel
+function getVoterDetails(votes) {
+  const voterDetails = {};
+  
+  votes.forEach(vote => {
+    const parcelId = vote.parcel_id;
+    if (!voterDetails[parcelId]) {
+      voterDetails[parcelId] = [];
+    }
+    
+    voterDetails[parcelId].push({
+      username: vote.username,
+      voted_at: vote.created_at || new Date().toISOString()
+    });
+  });
+  
+  return voterDetails;
+}
+
+// Get unique voters from all votes
+function getUniqueVoters(votes) {
+  const uniqueUsernames = new Set();
+  votes.forEach(vote => uniqueUsernames.add(vote.username));
+  return Array.from(uniqueUsernames);
+}
+
+// Generate voter summary statistics
+function getVoterSummary(votes) {
+  const voterCounts = {};
+  const voterParcelCounts = {};
+  
+  votes.forEach(vote => {
+    // Count total votes per user
+    voterCounts[vote.username] = (voterCounts[vote.username] || 0) + 1;
+    
+    // Count unique parcels voted on per user
+    if (!voterParcelCounts[vote.username]) {
+      voterParcelCounts[vote.username] = new Set();
+    }
+    voterParcelCounts[vote.username].add(vote.parcel_id);
+  });
+  
+  const summary = {
+    total_voters: Object.keys(voterCounts).length,
+    voter_activity: Object.keys(voterCounts).map(username => ({
+      username: username,
+      total_votes: voterCounts[username],
+      unique_parcels_voted: voterParcelCounts[username].size,
+      average_votes_per_parcel: (voterCounts[username] / voterParcelCounts[username].size).toFixed(2)
+    })).sort((a, b) => b.total_votes - a.total_votes)
+  };
+  
+  return summary;
+}
+
+// Analyze voting patterns
+function getVotingPatterns(votes) {
+  const patterns = {
+    most_active_voters: [],
+    voting_clusters: {},
+    potential_collaboration: []
+  };
+  
+  // Group votes by user to find patterns
+  const userVotes = {};
+  votes.forEach(vote => {
+    if (!userVotes[vote.username]) {
+      userVotes[vote.username] = [];
+    }
+    userVotes[vote.username].push(vote.parcel_id);
+  });
+  
+  // Find most active voters
+  const voterActivity = Object.entries(userVotes).map(([username, parcels]) => ({
+    username,
+    parcel_count: parcels.length,
+    parcels: parcels
+  })).sort((a, b) => b.parcel_count - a.parcel_count);
+  
+  patterns.most_active_voters = voterActivity.slice(0, 5);
+  
+  // Find potential voting clusters (users voting on same parcels)
+  const parcelVoters = {};
+  votes.forEach(vote => {
+    if (!parcelVoters[vote.parcel_id]) {
+      parcelVoters[vote.parcel_id] = [];
+    }
+    parcelVoters[vote.parcel_id].push(vote.username);
+  });
+  
+  // Find parcels with multiple voters
+  Object.entries(parcelVoters).forEach(([parcelId, voters]) => {
+    if (voters.length > 1) {
+      patterns.voting_clusters[parcelId] = {
+        voter_count: voters.length,
+        voters: voters
+      };
+    }
+  });
+  
+  return patterns;
+}
+
+// Identify potential stakeholders based on voting behavior
+function getStakeholderIdentification(votes) {
+  const stakeholderAnalysis = {
+    high_activity_users: [],
+    focused_voters: [],
+    potential_stakeholders: []
+  };
+  
+  const userVotes = {};
+  votes.forEach(vote => {
+    if (!userVotes[vote.username]) {
+      userVotes[vote.username] = [];
+    }
+    userVotes[vote.username].push(vote.parcel_id);
+  });
+  
+  // Analyze each user's voting pattern
+  Object.entries(userVotes).forEach(([username, parcels]) => {
+    const uniqueParcels = new Set(parcels);
+    const totalVotes = parcels.length;
+    const uniqueParcelCount = uniqueParcels.size;
+    
+    const userAnalysis = {
+      username: username,
+      total_votes: totalVotes,
+      unique_parcels: uniqueParcelCount,
+      vote_concentration: (totalVotes / uniqueParcelCount).toFixed(2),
+      voting_behavior: totalVotes > 10 ? 'high_activity' : 
+                      uniqueParcelCount < 3 ? 'focused' : 'moderate'
+    };
+    
+    if (totalVotes > 10) {
+      stakeholderAnalysis.high_activity_users.push(userAnalysis);
+    } else if (uniqueParcelCount < 3 && totalVotes > 1) {
+      stakeholderAnalysis.focused_voters.push(userAnalysis);
+    }
+    
+    // Flag potential stakeholders (high activity or focused voting)
+    if (totalVotes > 5 || (uniqueParcelCount < 3 && totalVotes > 1)) {
+      stakeholderAnalysis.potential_stakeholders.push({
+        ...userAnalysis,
+        stakeholder_type: totalVotes > 10 ? 'high_engagement' : 'focused_interest'
+      });
+    }
+  });
+  
+  return stakeholderAnalysis;
 }
 
 // Get color based on vote count
