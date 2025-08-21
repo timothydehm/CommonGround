@@ -11,28 +11,28 @@ const supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.
 
 // Form validation
 function validateForm() {
-  const title = document.getElementById('mapTitle').value.trim();
-  const prompt = document.getElementById('mapPrompt').value.trim();
+  const title = Utils.sanitizeInput(document.getElementById('mapTitle').value);
+  const prompt = Utils.sanitizeInput(document.getElementById('mapPrompt').value);
   const fileInput = document.getElementById('geojsonFile');
   const file = fileInput.files[0];
 
   if (!title) {
-    showError('Please enter a map title');
+    Utils.showError('Please enter a map title', document.getElementById('mapForm'));
     return false;
   }
 
   if (!prompt) {
-    showError('Please enter a prompt/instructions');
+    Utils.showError('Please enter a prompt/instructions', document.getElementById('mapForm'));
     return false;
   }
 
   if (!file) {
-    showError('Please select a GeoJSON file');
+    Utils.showError('Please select a GeoJSON file', document.getElementById('mapForm'));
     return false;
   }
 
   if (!file.name.toLowerCase().endsWith('.geojson')) {
-    showError('Please select a valid GeoJSON file');
+    Utils.showError('Please select a valid GeoJSON file', document.getElementById('mapForm'));
     return false;
   }
 
@@ -67,11 +67,6 @@ async function parseGeoJSONFile(file) {
   }
 }
 
-// Generate unique map ID
-function generateMapId() {
-  return 'map_' + Date.now().toString(36) + Math.random().toString(36).substring(2);
-}
-
 // Save map to Supabase
 async function saveMapToSupabase(mapData) {
   const { data, error } = await supabaseClient
@@ -85,43 +80,6 @@ async function saveMapToSupabase(mapData) {
   }
 
   return data;
-}
-
-// Show error message
-function showError(message) {
-  // Remove existing error messages
-  const existingErrors = document.querySelectorAll('.error');
-  existingErrors.forEach(error => error.remove());
-
-  const errorDiv = document.createElement('div');
-  errorDiv.className = 'error';
-  errorDiv.textContent = message;
-  
-  const form = document.getElementById('mapForm');
-  form.insertBefore(errorDiv, form.firstChild);
-  
-  // Auto-remove after 5 seconds
-  setTimeout(() => {
-    if (errorDiv.parentNode) {
-      errorDiv.parentNode.removeChild(errorDiv);
-    }
-  }, 5000);
-}
-
-// Show success message
-function showSuccess(message) {
-  const successDiv = document.createElement('div');
-  successDiv.className = 'success';
-  successDiv.textContent = message;
-  
-  const form = document.getElementById('mapForm');
-  form.insertBefore(successDiv, form.firstChild);
-  
-  setTimeout(() => {
-    if (successDiv.parentNode) {
-      successDiv.parentNode.removeChild(successDiv);
-    }
-  }, 3000);
 }
 
 // Set form loading state
@@ -160,7 +118,7 @@ async function handleFormSubmit(e) {
     const geojson = await parseGeoJSONFile(file);
     
     // Generate map ID
-    const mapId = generateMapId();
+    const mapId = Utils.generateId();
     
     // Save to Supabase
     const savedData = await saveMapToSupabase({
@@ -171,7 +129,7 @@ async function handleFormSubmit(e) {
     });
     
     console.log('Successfully created map:', savedData);
-    showSuccess('Map created successfully! Redirecting...');
+    Utils.showSuccess('Map created successfully! Redirecting...', document.getElementById('mapForm'));
     
     // Redirect to voting map
     setTimeout(() => {
@@ -180,7 +138,7 @@ async function handleFormSubmit(e) {
     
   } catch (error) {
     console.error('Error creating map:', error);
-    showError(error.message || 'Error creating map. Please try again.');
+    Utils.showError(error.message || 'Error creating map. Please try again.', document.getElementById('mapForm'));
   } finally {
     setFormLoading(false);
   }

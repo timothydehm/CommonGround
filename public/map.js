@@ -8,23 +8,24 @@ const CONFIG = {
 };
 
 // Global state
-let map, supabaseClient, mapId, layerMap = {}, pollingInterval;
+let map, mapId, layerMap = {}, pollingInterval, lastVoteCount = 0, mapData = null;
 
 // Initialize the application
 async function init() {
   try {
     initializeMap();
-    initializeSupabase();
     setupCopyLinkButton();
+    setupExportButton();
     
     const urlParams = new URLSearchParams(window.location.search);
     mapId = urlParams.get('id');
     
     if (!mapId) {
-      await loadSampleData();
-    } else {
-      await loadMapData(mapId);
+      showError('No map ID provided. Please use a valid map link.');
+      return;
     }
+    
+    await loadMapData(mapId);
   } catch (error) {
     console.error('Initialization error:', error);
     showError('Failed to initialize the application');
@@ -42,11 +43,6 @@ function initializeMap() {
   }).addTo(map);
 }
 
-// Initialize Supabase client
-function initializeSupabase() {
-  supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
-}
-
 // Setup copy link button
 function setupCopyLinkButton() {
   const copyBtn = document.getElementById('copyLinkBtn');
@@ -55,10 +51,18 @@ function setupCopyLinkButton() {
   }
 }
 
+// Setup export button
+function setupExportButton() {
+  const exportBtn = document.getElementById('exportBtn');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', exportGeoJSON);
+  }
+}
+
 // Copy map link to clipboard
 async function copyMapLink() {
   if (!mapId) {
-    showError('No map link to copy (sample mode)');
+    showError('No map link to copy');
     return;
   }
   
@@ -80,13 +84,84 @@ async function copyMapLink() {
   }
 }
 
+// Export GeoJSON with vote counts
+async function exportGeoJSON() {
+  if (!mapData || !mapId) {
+    showError('No map data available for export');
+    return;
+  }
+
+  try {
+    // Get current vote data
+    const { data: votes, error } = await supabaseClient
+      .from('votes')
+      .select('*')
+      .eq('map_id', mapId);
+
+    if (error) {
+      console.error('Error loading votes for export:', error);
+      showError('Error loading vote data for export');
+      return;
+    }
+
+    // Calculate vote counts
+    const voteCounts = getVoteCounts(votes);
+    const maxVotes = Math.max(...Object.values(voteCounts), 0);
+
+    // Create export data with vote counts
+    const exportData = {
+      type: 'FeatureCollection',
+      features: mapData.geojson.features.map(feature => {
+        const parcelId = feature.properties.PARCELID || feature.properties.id || feature.id;
+        const voteCount = voteCounts[parcelId] || 0;
+        const votePercentage = maxVotes > 0 ? (voteCount / maxVotes * 100).toFixed(1) : 0;
+        
+        return {
+          ...feature,
+          properties: {
+            ...feature.properties,
+            vote_count: voteCount,
+            vote_percentage: parseFloat(votePercentage),
+            has_votes: voteCount > 0
+          }
+        };
+      }),
+      metadata: {
+        map_title: mapData.title,
+        map_prompt: mapData.prompt,
+        total_votes: votes.length,
+        total_parcels: mapData.geojson.features.length,
+        parcels_with_votes: Object.keys(voteCounts).length,
+        export_date: new Date().toISOString(),
+        max_votes_per_parcel: maxVotes
+      }
+    };
+
+    // Create and download file
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${mapData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_voting_results.geojson`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showSuccess('Voting results exported successfully!');
+  } catch (error) {
+    console.error('Error exporting GeoJSON:', error);
+    showError('Error exporting voting results');
+  }
+}
+
 // Get username from localStorage or prompt for it
 function getUsername() {
   let username = localStorage.getItem('username');
   if (!username) {
     username = prompt("Enter your username to vote:");
     if (username && username.trim()) {
-      localStorage.setItem('username', username.trim());
+      localStorage.setItem('username', Utils.sanitizeInput(username));
     }
   }
   return username;
@@ -108,7 +183,7 @@ function getColorByVotes(voteCount, maxVotes) {
   return `rgba(0, 0, 0, ${opacity})`;
 }
 
-// Load and update vote styles
+// Load and update vote styles with optimization
 async function loadVotesAndUpdateStyles() {
   if (!mapId) return;
   
@@ -122,6 +197,10 @@ async function loadVotesAndUpdateStyles() {
       console.error('Error loading votes:', error);
       return;
     }
+
+    // Only update if vote count changed
+    if (votes.length === lastVoteCount) return;
+    lastVoteCount = votes.length;
 
     const voteCounts = getVoteCounts(votes);
     const maxVotes = Math.max(...Object.values(voteCounts), 0);
@@ -139,25 +218,6 @@ async function loadVotesAndUpdateStyles() {
   }
 }
 
-// Load sample data
-async function loadSampleData() {
-  try {
-    const response = await fetch('parcels.geojson');
-    if (!response.ok) throw new Error('Failed to load sample data');
-    
-    const data = await response.json();
-    
-    document.title = 'Sample Voting Map';
-    document.getElementById('map-title').textContent = 'Sample Voting Map';
-    document.getElementById('map-prompt').textContent = 'Click on parcels to vote. This is a sample map.';
-
-    addGeoJSONToMap(data, true);
-  } catch (error) {
-    console.error('Error loading sample data:', error);
-    showError('Error loading sample data');
-  }
-}
-
 // Load map data from Supabase
 async function loadMapData(mapId) {
   try {
@@ -170,15 +230,20 @@ async function loadMapData(mapId) {
     if (error) throw error;
     if (!data) throw new Error('Map not found');
 
+    // Store map data for export
+    mapData = data;
+
     document.title = data.title;
     document.getElementById('map-title').textContent = data.title;
     document.getElementById('map-prompt').textContent = data.prompt;
 
-    // Show copy button for real maps
+    // Show copy and export buttons
     const copyBtn = document.getElementById('copyLinkBtn');
+    const exportBtn = document.getElementById('exportBtn');
     if (copyBtn) copyBtn.style.display = 'block';
+    if (exportBtn) exportBtn.style.display = 'block';
 
-    addGeoJSONToMap(data.geojson, false);
+    addGeoJSONToMap(data.geojson);
     
     // Start polling for vote updates
     startPolling();
@@ -189,7 +254,7 @@ async function loadMapData(mapId) {
 }
 
 // Add GeoJSON to map with consistent styling
-function addGeoJSONToMap(geojsonData, isSample = false) {
+function addGeoJSONToMap(geojsonData) {
   const geojsonLayer = L.geoJSON(geojsonData, {
     style: {
       color: '#999999',
@@ -200,22 +265,12 @@ function addGeoJSONToMap(geojsonData, isSample = false) {
     onEachFeature: (feature, layer) => {
       const parcelId = feature.properties.PARCELID || feature.properties.id || feature.id;
       layerMap[parcelId] = layer;
-
-      if (isSample) {
-        layer.on('click', () => {
-          alert('This is a sample map. Create a real map to enable voting.');
-        });
-      } else {
-        layer.on('click', () => handleParcelClick(parcelId));
-      }
+      layer.on('click', () => handleParcelClick(parcelId));
     }
   }).addTo(map);
 
   map.fitBounds(geojsonLayer.getBounds());
-  
-  if (!isSample) {
-    loadVotesAndUpdateStyles();
-  }
+  loadVotesAndUpdateStyles();
 }
 
 // Handle parcel click for voting
@@ -283,6 +338,22 @@ function showError(message) {
       errorDiv.parentNode.removeChild(errorDiv);
     }
   }, 5000);
+}
+
+// Show success message
+function showSuccess(message) {
+  const successDiv = document.createElement('div');
+  successDiv.className = 'success';
+  successDiv.textContent = message;
+  
+  const infoPanel = document.getElementById('info-panel');
+  infoPanel.appendChild(successDiv);
+  
+  setTimeout(() => {
+    if (successDiv.parentNode) {
+      successDiv.parentNode.removeChild(successDiv);
+    }
+  }, 3000);
 }
 
 // Cleanup on page unload

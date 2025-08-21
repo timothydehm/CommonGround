@@ -31,9 +31,13 @@ body {
   text-decoration: underline;
 }
 
-.copy-btn {
-  background-color: #28a745;
-  color: white;
+.nav-buttons {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.copy-btn, .export-btn {
   padding: 8px 16px;
   border: none;
   border-radius: 4px;
@@ -43,11 +47,25 @@ body {
   transition: background-color 0.2s;
 }
 
+.copy-btn {
+  background-color: #28a745;
+  color: white;
+}
+
 .copy-btn:hover {
   background-color: #218838;
 }
 
-.copy-btn:active {
+.export-btn {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.export-btn:hover {
+  background-color: #138496;
+}
+
+.copy-btn:active, .export-btn:active {
   transform: translateY(1px);
 }
 
@@ -83,8 +101,9 @@ body {
 /* Form styles */
 h1 {
   color: #212529;
-  margin-bottom: 30px;
+  margin: 30px 0;
   font-weight: 600;
+  text-align: center;
 }
 
 form {
@@ -147,6 +166,11 @@ button:active {
   transform: translateY(1px);
 }
 
+button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
 input[type="file"] {
   padding: 12px;
   border: 2px dashed #ced4da;
@@ -167,22 +191,21 @@ input[type="file"]:hover {
   pointer-events: none;
 }
 
-/* Error states */
-.error {
-  color: #dc3545;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
+/* Error and success states */
+.error, .success {
   padding: 10px;
   border-radius: 4px;
   margin: 10px 0;
 }
 
-/* Success states */
+.error {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+}
+
 .success {
   color: #155724;
   background-color: #d4edda;
   border: 1px solid #c3e6cb;
-  padding: 10px;
-  border-radius: 4px;
-  margin: 10px 0;
 } 

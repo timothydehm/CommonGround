@@ -10,7 +10,10 @@
 <body>
   <div class="nav">
     <a href="create.html" class="nav-link">Create New Map</a>
-    <button id="copyLinkBtn" class="copy-btn" style="display: none;">Copy Link URL</button>
+    <div class="nav-buttons">
+      <button id="copyLinkBtn" class="copy-btn" style="display: none;">Copy Link URL</button>
+      <button id="exportBtn" class="export-btn" style="display: none;">Export Results</button>
+    </div>
   </div>
   
   <div id="info-panel">
@@ -21,6 +24,7 @@
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../supabase.js"></script>
   <script src="map.js"></script>
 </body>
 </html> 
