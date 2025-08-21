@@ -7,6 +7,7 @@ A simple, efficient voting map application for collaborative land use planning. 
 - **Create Maps**: Upload GeoJSON files with custom titles and prompts
 - **Vote on Parcels**: Click parcels to vote/unvote with real-time updates
 - **Visual Feedback**: Vote counts displayed as color intensity on the map
+- **Personal Vote View**: Toggle between all votes and your own votes only
 - **Share Maps**: Copy direct links to share voting maps
 - **Export Results**: Download GeoJSON with voting data included
 
@@ -43,7 +44,21 @@ A simple, efficient voting map application for collaborative land use planning. 
 3. Add a title and voting instructions
 4. Share the generated link for voting
 5. Users click parcels to vote with real-time updates
-6. Export voting results as GeoJSON with vote counts included
+6. Use the toggle button to view only your own votes
+7. Export voting results as GeoJSON with vote counts included
+
+## Voting Features
+
+### **All Votes View (Default)**
+- Shows vote counts from all users
+- Color intensity represents total votes per parcel
+- Best for seeing overall community preferences
+
+### **My Votes Only View**
+- Click "Show My Votes Only" toggle button
+- Shows only your personal voting history
+- Useful for reviewing your own choices
+- Toggle back to "Show All Votes" anytime
 
 ## Export Format
 

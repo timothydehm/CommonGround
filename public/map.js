@@ -1,5 +1,6 @@
 // Global state
 let map, mapId, layerMap = {}, pollingInterval, lastVoteCount = 0, mapData = null;
+let showMyVotesOnly = false, currentUsername = null;
 
 // Initialize the application
 async function init() {
@@ -7,6 +8,7 @@ async function init() {
     initializeMap();
     setupCopyLinkButton();
     setupExportButton();
+    setupViewToggleButton();
     
     const urlParams = new URLSearchParams(window.location.search);
     mapId = urlParams.get('id');
@@ -50,6 +52,28 @@ function setupExportButton() {
   }
 }
 
+// Setup view toggle button
+function setupViewToggleButton() {
+  const toggleBtn = document.getElementById('viewToggleBtn');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', toggleViewMode);
+  }
+}
+
+// Toggle between all votes and my votes only
+function toggleViewMode() {
+  showMyVotesOnly = !showMyVotesOnly;
+  const toggleBtn = document.getElementById('viewToggleBtn');
+  
+  if (toggleBtn) {
+    toggleBtn.textContent = showMyVotesOnly ? 'Show All Votes' : 'Show My Votes Only';
+    toggleBtn.classList.toggle('active', showMyVotesOnly);
+  }
+  
+  // Reload votes with new filter
+  loadVotesAndUpdateStyles();
+}
+
 // Copy map link to clipboard
 async function copyMapLink() {
   if (!mapId) {
@@ -83,7 +107,7 @@ async function exportGeoJSON() {
   }
 
   try {
-    // Get current vote data
+    // Get current vote data (always export all votes, not filtered)
     const { data: votes, error } = await supabaseClient
       .from('votes')
       .select('*')
@@ -155,6 +179,7 @@ function getUsername() {
       localStorage.setItem('username', Utils.sanitizeInput(username));
     }
   }
+  currentUsername = username;
   return username;
 }
 
@@ -179,10 +204,17 @@ async function loadVotesAndUpdateStyles() {
   if (!mapId) return;
   
   try {
-    const { data: votes, error } = await supabaseClient
+    let query = supabaseClient
       .from('votes')
       .select('*')
       .eq('map_id', mapId);
+    
+    // Filter by username if showing only my votes
+    if (showMyVotesOnly && currentUsername) {
+      query = query.eq('username', currentUsername);
+    }
+    
+    const { data: votes, error } = await query;
 
     if (error) {
       console.error('Error loading votes:', error);
@@ -228,11 +260,13 @@ async function loadMapData(mapId) {
     document.getElementById('map-title').textContent = data.title;
     document.getElementById('map-prompt').textContent = data.prompt;
 
-    // Show copy and export buttons
+    // Show all buttons
     const copyBtn = document.getElementById('copyLinkBtn');
     const exportBtn = document.getElementById('exportBtn');
+    const toggleBtn = document.getElementById('viewToggleBtn');
     if (copyBtn) copyBtn.style.display = 'block';
     if (exportBtn) exportBtn.style.display = 'block';
+    if (toggleBtn) toggleBtn.style.display = 'block';
 
     addGeoJSONToMap(data.geojson);
     
