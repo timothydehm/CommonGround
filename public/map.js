@@ -122,6 +122,7 @@ async function exportGeoJSON() {
     // Calculate vote counts and collect voter details
     const voteCounts = getVoteCounts(votes);
     const voterDetails = getVoterDetails(votes);
+    const uniqueVoters = getUniqueVoters(votes);
     const maxVotes = Math.max(...Object.values(voteCounts), 0);
 
     // Create export data with vote counts and voter details
@@ -131,7 +132,14 @@ async function exportGeoJSON() {
         const parcelId = feature.properties.PARCELID || feature.properties.id || feature.id;
         const voteCount = voteCounts[parcelId] || 0;
         const votePercentage = maxVotes > 0 ? (voteCount / maxVotes * 100).toFixed(1) : 0;
-        const voters = voterDetails[parcelId] || [];
+        const parcelVoters = voterDetails[parcelId] || [];
+        
+        // Create voter columns for each unique voter
+        const voterColumns = {};
+        uniqueVoters.forEach(voter => {
+          const voterVote = parcelVoters.find(v => v.username === voter);
+          voterColumns[`voter_${voter}`] = voterVote ? voterVote.voted_at : null;
+        });
         
         return {
           ...feature,
@@ -140,8 +148,9 @@ async function exportGeoJSON() {
             vote_count: voteCount,
             vote_percentage: parseFloat(votePercentage),
             has_votes: voteCount > 0,
-            voters: voters,
-            voter_count: voters.length
+            voter_count: parcelVoters.length,
+            // Add voter columns
+            ...voterColumns
           }
         };
       }),
@@ -151,9 +160,10 @@ async function exportGeoJSON() {
         total_votes: votes.length,
         total_parcels: mapData.geojson.features.length,
         parcels_with_votes: Object.keys(voteCounts).length,
-        unique_voters: getUniqueVoters(votes).length,
+        unique_voters: uniqueVoters.length,
         export_date: new Date().toISOString(),
         max_votes_per_parcel: maxVotes,
+        voter_columns: uniqueVoters.map(voter => `voter_${voter}`),
         voting_analysis: {
           voter_summary: getVoterSummary(votes),
           voting_patterns: getVotingPatterns(votes),
@@ -167,13 +177,13 @@ async function exportGeoJSON() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${mapData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_voting_results_detailed.geojson`;
+    a.download = `${mapData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_voting_results_spreadsheet.geojson`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    showSuccess('Detailed voting results exported successfully!');
+    showSuccess('Spreadsheet-friendly voting results exported successfully!');
   } catch (error) {
     console.error('Error exporting GeoJSON:', error);
     showError('Error exporting voting results');
@@ -224,7 +234,7 @@ function getVoterDetails(votes) {
 function getUniqueVoters(votes) {
   const uniqueUsernames = new Set();
   votes.forEach(vote => uniqueUsernames.add(vote.username));
-  return Array.from(uniqueUsernames);
+  return Array.from(uniqueUsernames).sort(); // Sort for consistent column order
 }
 
 // Generate voter summary statistics
