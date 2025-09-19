@@ -200,6 +200,12 @@ function getUsername() {
     }
   }
   currentUsername = username;
+  
+  // Update vote counter when username is set
+  if (username && mapData && mapData.vote_limit) {
+    loadVotesAndUpdateStyles();
+  }
+  
   return username;
 }
 
@@ -371,6 +377,18 @@ function getColorByVotes(voteCount, maxVotes) {
   return `rgba(0, 0, 0, ${opacity})`;
 }
 
+// Update vote counter display
+function updateVoteCounter(votes) {
+  if (!currentUsername || !mapData || !mapData.vote_limit) return;
+  
+  const userVotes = votes.filter(vote => vote.username === currentUsername);
+  const voteCountSpan = document.getElementById('vote-count');
+  
+  if (voteCountSpan) {
+    voteCountSpan.textContent = userVotes.length;
+  }
+}
+
 // Load and update vote styles with optimization
 async function loadVotesAndUpdateStyles() {
   if (!mapId) return;
@@ -396,6 +414,9 @@ async function loadVotesAndUpdateStyles() {
     // Only update if vote count changed
     if (votes.length === lastVoteCount) return;
     lastVoteCount = votes.length;
+
+    // Update vote counter
+    updateVoteCounter(votes);
 
     const voteCounts = getVoteCounts(votes);
     const maxVotes = Math.max(...Object.values(voteCounts), 0);
@@ -431,6 +452,16 @@ async function loadMapData(mapId) {
     document.title = data.title;
     document.getElementById('map-title').textContent = data.title;
     document.getElementById('map-prompt').textContent = data.prompt;
+
+    // Show vote counter if there's a vote limit
+    const voteCounter = document.getElementById('vote-counter');
+    const voteLimitSpan = document.getElementById('vote-limit');
+    if (data.vote_limit) {
+      voteLimitSpan.textContent = data.vote_limit;
+      voteCounter.style.display = 'block';
+    } else {
+      voteCounter.style.display = 'none';
+    }
 
     // Show all buttons
     const copyBtn = document.getElementById('copyLinkBtn');
@@ -496,6 +527,22 @@ async function handleParcelClick(parcelId) {
 
       if (deleteError) throw deleteError;
     } else {
+      // Check vote limit before adding vote
+      if (mapData && mapData.vote_limit) {
+        const { data: userVotes, error: userVotesError } = await supabaseClient
+          .from('votes')
+          .select('*')
+          .filter('map_id', 'eq', mapId)
+          .filter('username', 'eq', username);
+
+        if (userVotesError) throw userVotesError;
+
+        if (userVotes && userVotes.length >= mapData.vote_limit) {
+          showError(`You have reached the vote limit of ${mapData.vote_limit} votes. Remove a vote to add a new one.`);
+          return;
+        }
+      }
+
       // Add vote
       const { error: insertError } = await supabaseClient
         .from('votes')

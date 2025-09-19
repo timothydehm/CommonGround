@@ -4,6 +4,8 @@
 function validateForm() {
   const title = Utils.sanitizeInput(document.getElementById('mapTitle').value);
   const prompt = Utils.sanitizeInput(document.getElementById('mapPrompt').value);
+  const voteLimitInput = document.getElementById('voteLimit');
+  const voteLimit = voteLimitInput.value ? parseInt(voteLimitInput.value) : null;
   const fileInput = document.getElementById('geojsonFile');
   const file = fileInput.files[0];
 
@@ -17,6 +19,11 @@ function validateForm() {
     return false;
   }
 
+  if (voteLimit !== null && (isNaN(voteLimit) || voteLimit < 1)) {
+    Utils.showError('Vote limit must be a positive number', document.getElementById('mapForm'));
+    return false;
+  }
+
   if (!file) {
     Utils.showError('Please select a GeoJSON file', document.getElementById('mapForm'));
     return false;
@@ -27,7 +34,7 @@ function validateForm() {
     return false;
   }
 
-  return { title, prompt, file };
+  return { title, prompt, voteLimit, file };
 }
 
 // Parse GeoJSON file
@@ -100,7 +107,7 @@ async function handleFormSubmit(e) {
     const formData = validateForm();
     if (!formData) return;
     
-    const { title, prompt, file } = formData;
+    const { title, prompt, voteLimit, file } = formData;
     
     // Set loading state
     setFormLoading(true);
@@ -116,7 +123,8 @@ async function handleFormSubmit(e) {
       id: mapId,
       title: title,
       prompt: prompt,
-      geojson: geojson
+      geojson: geojson,
+      vote_limit: voteLimit
     });
     
     console.log('Successfully created map:', savedData);
