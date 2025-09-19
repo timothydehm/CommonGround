@@ -70,6 +70,70 @@ html, body {
   border-color: #0057e7;
 }
 
+/* Tooltip styles */
+.parcel-tooltip {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 1000;
+  max-width: 250px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.parcel-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.9) transparent transparent transparent;
+}
+
+.tooltip-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #fff;
+}
+
+.tooltip-voters {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tooltip-voter {
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tooltip-voter:last-child {
+  border-bottom: none;
+}
+
+.tooltip-voter-name {
+  font-weight: 500;
+  color: #4caf50;
+}
+
+.tooltip-voter-time {
+  font-size: 10px;
+  color: #ccc;
+  margin-left: 8px;
+}
+
+.tooltip-no-votes {
+  color: #999;
+  font-style: italic;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   display: flex;

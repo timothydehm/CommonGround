@@ -2,6 +2,9 @@
 let map, mapId, layerMap = {}, pollingInterval, lastVoteCount = 0, mapData = null;
 let showMyVotesOnly = false, currentUsername = null;
 let debounceTimeout = null;
+let tooltipsEnabled = false;
+let currentVotes = [];
+let tooltipElement = null;
 
 // Initialize the application
 async function init() {
@@ -12,6 +15,7 @@ async function init() {
     setupExportButton();
     setupViewToggleButton();
     setupChangeUserButton();
+    setupTooltipToggleButton();
     
     const urlParams = new URLSearchParams(window.location.search);
     mapId = urlParams.get('id');
@@ -85,6 +89,14 @@ function setupChangeUserButton() {
   }
 }
 
+// Setup tooltip toggle button
+function setupTooltipToggleButton() {
+  const tooltipToggleBtn = document.getElementById('tooltipToggleBtn');
+  if (tooltipToggleBtn) {
+    tooltipToggleBtn.addEventListener('click', toggleTooltips);
+  }
+}
+
 // Toggle between all votes and my votes only
 function toggleViewMode() {
   showMyVotesOnly = !showMyVotesOnly;
@@ -97,6 +109,25 @@ function toggleViewMode() {
   
   // Reload votes with new filter
   loadVotesAndUpdateStyles();
+}
+
+// Toggle tooltips on/off
+function toggleTooltips() {
+  tooltipsEnabled = !tooltipsEnabled;
+  const tooltipToggleBtn = document.getElementById('tooltipToggleBtn');
+  
+  if (tooltipToggleBtn) {
+    tooltipToggleBtn.textContent = tooltipsEnabled ? 'Disable Tooltips' : 'Enable Tooltips';
+    tooltipToggleBtn.classList.toggle('active', tooltipsEnabled);
+  }
+  
+  // Update all parcel event listeners
+  updateParcelEventListeners();
+  
+  // Hide tooltip if it's currently showing
+  if (!tooltipsEnabled) {
+    hideTooltip();
+  }
 }
 
 // Copy map link to clipboard
@@ -516,6 +547,9 @@ async function loadVotesAndUpdateStyles() {
     if (votes.length === lastVoteCount) return;
     lastVoteCount = votes.length;
 
+    // Store current votes for tooltips
+    currentVotes = votes;
+
     // Update vote counter
     updateVoteCounter(votes);
 
@@ -578,9 +612,11 @@ async function loadMapData(mapId) {
     const copyBtn = document.getElementById('copyLinkBtn');
     const exportBtn = document.getElementById('exportBtn');
     const toggleBtn = document.getElementById('viewToggleBtn');
+    const tooltipToggleBtn = document.getElementById('tooltipToggleBtn');
     if (copyBtn) copyBtn.style.display = 'block';
     if (exportBtn) exportBtn.style.display = 'block';
     if (toggleBtn) toggleBtn.style.display = 'block';
+    if (tooltipToggleBtn) tooltipToggleBtn.style.display = 'block';
 
     addGeoJSONToMap(data.geojson);
     
@@ -610,6 +646,9 @@ function addGeoJSONToMap(geojsonData) {
 
   map.fitBounds(geojsonLayer.getBounds());
   loadVotesAndUpdateStyles();
+  
+  // Set up initial tooltip event listeners
+  updateParcelEventListeners();
 }
 
 // Handle parcel click for voting with optimistic updates
@@ -749,6 +788,79 @@ function showLoadingIndicator(show) {
   if (loadingIndicator) {
     loadingIndicator.style.display = show ? 'flex' : 'none';
   }
+}
+
+// Create tooltip element
+function createTooltip() {
+  if (!tooltipElement) {
+    tooltipElement = document.createElement('div');
+    tooltipElement.className = 'parcel-tooltip';
+    tooltipElement.style.display = 'none';
+    document.body.appendChild(tooltipElement);
+  }
+  return tooltipElement;
+}
+
+// Show tooltip for a parcel
+function showTooltip(parcelId, event) {
+  if (!tooltipsEnabled) return;
+  
+  const tooltip = createTooltip();
+  const parcelVotes = currentVotes.filter(vote => vote.parcel_id === parcelId);
+  
+  if (parcelVotes.length === 0) {
+    tooltip.innerHTML = `
+      <div class="tooltip-title">No votes yet</div>
+      <div class="tooltip-no-votes">Click to vote for this parcel</div>
+    `;
+  } else {
+    const voterList = parcelVotes.map(vote => {
+      const voteTime = new Date(vote.created_at).toLocaleString();
+      return `
+        <div class="tooltip-voter">
+          <span class="tooltip-voter-name">${vote.username}</span>
+          <span class="tooltip-voter-time">${voteTime}</span>
+        </div>
+      `;
+    }).join('');
+    
+    tooltip.innerHTML = `
+      <div class="tooltip-title">${parcelVotes.length} vote${parcelVotes.length > 1 ? 's' : ''}</div>
+      <div class="tooltip-voters">${voterList}</div>
+    `;
+  }
+  
+  // Position tooltip
+  const x = event.containerPoint.x;
+  const y = event.containerPoint.y;
+  
+  tooltip.style.left = (x + 10) + 'px';
+  tooltip.style.top = (y - 10) + 'px';
+  tooltip.style.display = 'block';
+}
+
+// Hide tooltip
+function hideTooltip() {
+  if (tooltipElement) {
+    tooltipElement.style.display = 'none';
+  }
+}
+
+// Update parcel event listeners for tooltips
+function updateParcelEventListeners() {
+  Object.keys(layerMap).forEach(parcelId => {
+    const layer = layerMap[parcelId];
+    
+    // Remove existing event listeners
+    layer.off('mouseover');
+    layer.off('mouseout');
+    
+    if (tooltipsEnabled) {
+      // Add tooltip event listeners
+      layer.on('mouseover', (e) => showTooltip(parcelId, e));
+      layer.on('mouseout', hideTooltip);
+    }
+  });
 }
 
 // Cleanup on page unload
