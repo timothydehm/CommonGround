@@ -2,12 +2,18 @@
 
 // Form validation
 function validateForm() {
+  const creatorName = Utils.sanitizeInput(document.getElementById('creatorName').value);
   const title = Utils.sanitizeInput(document.getElementById('mapTitle').value);
   const prompt = Utils.sanitizeInput(document.getElementById('mapPrompt').value);
   const voteLimitInput = document.getElementById('voteLimit');
   const voteLimit = voteLimitInput.value ? parseInt(voteLimitInput.value) : null;
   const fileInput = document.getElementById('geojsonFile');
   const file = fileInput.files[0];
+
+  if (!creatorName) {
+    Utils.showError('Please enter your name as the map creator', document.getElementById('mapForm'));
+    return false;
+  }
 
   if (!title) {
     Utils.showError('Please enter a map title', document.getElementById('mapForm'));
@@ -34,7 +40,7 @@ function validateForm() {
     return false;
   }
 
-  return { title, prompt, voteLimit, file };
+  return { creatorName, title, prompt, voteLimit, file };
 }
 
 // Parse GeoJSON file
@@ -107,7 +113,7 @@ async function handleFormSubmit(e) {
     const formData = validateForm();
     if (!formData) return;
     
-    const { title, prompt, voteLimit, file } = formData;
+    const { creatorName, title, prompt, voteLimit, file } = formData;
     
     // Set loading state
     setFormLoading(true);
@@ -124,10 +130,15 @@ async function handleFormSubmit(e) {
       title: title,
       prompt: prompt,
       geojson: geojson,
-      vote_limit: voteLimit
+      vote_limit: voteLimit,
+      creator_name: creatorName
     });
     
     console.log('Successfully created map:', savedData);
+    
+    // Set creator as logged in user
+    localStorage.setItem('username', creatorName);
+    
     Utils.showSuccess('Map created successfully! Redirecting...', document.getElementById('mapForm'));
     
     // Redirect to voting map

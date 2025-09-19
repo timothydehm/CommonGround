@@ -11,6 +11,7 @@ async function init() {
     setupCopyLinkButton();
     setupExportButton();
     setupViewToggleButton();
+    setupChangeUserButton();
     
     const urlParams = new URLSearchParams(window.location.search);
     mapId = urlParams.get('id');
@@ -73,6 +74,14 @@ function setupViewToggleButton() {
   const toggleBtn = document.getElementById('viewToggleBtn');
   if (toggleBtn) {
     toggleBtn.addEventListener('click', toggleViewMode);
+  }
+}
+
+// Setup change user button
+function setupChangeUserButton() {
+  const changeUserBtn = document.getElementById('changeUserBtn');
+  if (changeUserBtn) {
+    changeUserBtn.addEventListener('click', changeUser);
   }
 }
 
@@ -217,12 +226,51 @@ function getUsername() {
   }
   currentUsername = username;
   
+  // Update user identifier display
+  updateUserIdentifier(username);
+  
   // Update vote counter when username is set
   if (username && mapData && mapData.vote_limit) {
     loadVotesAndUpdateStyles();
   }
   
   return username;
+}
+
+// Update user identifier display
+function updateUserIdentifier(username) {
+  const userIdentifier = document.getElementById('user-identifier');
+  const currentUsernameSpan = document.getElementById('current-username');
+  
+  if (username) {
+    if (currentUsernameSpan) {
+      currentUsernameSpan.textContent = username;
+    }
+    if (userIdentifier) {
+      userIdentifier.style.display = 'flex';
+    }
+  } else {
+    if (userIdentifier) {
+      userIdentifier.style.display = 'none';
+    }
+  }
+}
+
+// Change user functionality
+function changeUser() {
+  const newUsername = prompt("Enter your new username:");
+  if (newUsername && newUsername.trim()) {
+    localStorage.setItem('username', Utils.sanitizeInput(newUsername));
+    currentUsername = newUsername;
+    updateUserIdentifier(newUsername);
+    
+    // Refresh vote data for new user
+    if (mapData && mapData.vote_limit) {
+      loadVotesAndUpdateStyles();
+    }
+    
+    showSuccess(`Switched to user: ${newUsername}`);
+  }
 }
 
 // Calculate vote counts from vote data
