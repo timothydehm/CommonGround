@@ -70,90 +70,119 @@ html, body {
   border-color: #0057e7;
 }
 
-/* Tooltip styles */
-.parcel-tooltip {
-  position: absolute;
-  background-color: rgba(0, 0, 0, 0.9);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  pointer-events: none;
-  z-index: 1000;
-  max-width: 250px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.parcel-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
+/* Info mode panel styles */
+.info-panel {
+  position: fixed;
+  top: 50%;
   left: 50%;
-  margin-left: -5px;
-  border-width: 5px;
-  border-style: solid;
-  border-color: rgba(0, 0, 0, 0.9) transparent transparent transparent;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  border: 2px solid #0057e7;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  max-width: 400px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
-.tooltip-title {
+.info-panel-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+.info-panel-title {
+  font-size: 18px;
   font-weight: 600;
-  margin-bottom: 4px;
-  color: #fff;
+  color: #0057e7;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 8px;
 }
 
-.tooltip-voters {
+.info-panel-voters {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.tooltip-voter {
-  padding: 2px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+.info-panel-voter {
+  padding: 8px 0;
+  border-bottom: 1px solid #f8f9fa;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.tooltip-voter:last-child {
+.info-panel-voter:last-child {
   border-bottom: none;
 }
 
-.tooltip-voter-name {
+.info-panel-voter-name {
   font-weight: 500;
-  color: #4caf50;
+  color: #28a745;
 }
 
-.tooltip-voter-time {
-  font-size: 10px;
-  color: #ccc;
-  margin-left: 8px;
+.info-panel-voter-time {
+  font-size: 12px;
+  color: #666;
 }
 
-.tooltip-no-votes {
+.info-panel-no-votes {
   color: #999;
   font-style: italic;
+  text-align: center;
+  padding: 20px 0;
 }
 
-/* Tooltip toggle button specific styling */
-#tooltipToggleBtn {
+.info-panel-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-panel-close:hover {
+  color: #0057e7;
+}
+
+/* Info mode toggle button specific styling */
+#infoModeToggleBtn {
   background-color: #6c757d;
   color: white;
   border: 1px solid #6c757d;
 }
 
-#tooltipToggleBtn:hover {
+#infoModeToggleBtn:hover {
   background-color: #5a6268;
   border-color: #5a6268;
 }
 
-#tooltipToggleBtn.active {
-  background-color: #28a745;
-  border-color: #28a745;
+#infoModeToggleBtn.active {
+  background-color: #0057e7;
+  border-color: #0057e7;
 }
 
-#tooltipToggleBtn.active:hover {
-  background-color: #218838;
-  border-color: #218838;
+#infoModeToggleBtn.active:hover {
+  background-color: #0046b3;
+  border-color: #0046b3;
 }
 
 body {
