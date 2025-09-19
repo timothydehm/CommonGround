@@ -830,12 +830,14 @@ function showTooltip(parcelId, event) {
     `;
   }
   
-  // Position tooltip
-  const x = event.containerPoint.x;
-  const y = event.containerPoint.y;
+  // Position tooltip relative to the map container
+  const mapContainer = document.getElementById('map');
+  const mapRect = mapContainer.getBoundingClientRect();
+  const x = event.containerPoint.x + mapRect.left;
+  const y = event.containerPoint.y + mapRect.top;
   
-  tooltip.style.left = (x + 10) + 'px';
-  tooltip.style.top = (y - 10) + 'px';
+  tooltip.style.left = (x + 15) + 'px';
+  tooltip.style.top = (y - 35) + 'px';
   tooltip.style.display = 'block';
 }
 

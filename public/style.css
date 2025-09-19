@@ -134,6 +134,28 @@ html, body {
   font-style: italic;
 }
 
+/* Tooltip toggle button specific styling */
+#tooltipToggleBtn {
+  background-color: #6c757d;
+  color: white;
+  border: 1px solid #6c757d;
+}
+
+#tooltipToggleBtn:hover {
+  background-color: #5a6268;
+  border-color: #5a6268;
+}
+
+#tooltipToggleBtn.active {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+#tooltipToggleBtn.active:hover {
+  background-color: #218838;
+  border-color: #218838;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   display: flex;
