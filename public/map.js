@@ -522,34 +522,34 @@ async function loadVotesAndUpdateStyles() {
   if (!mapId) return;
   
   try {
-    let query = supabaseClient
+    // Always load all votes for info mode, regardless of view filter
+    const { data: allVotes, error: allVotesError } = await supabaseClient
       .from('votes')
       .select('*')
       .eq('map_id', mapId);
     
-    // Filter by username if showing only my votes
-    if (showMyVotesOnly && currentUsername) {
-      query = query.eq('username', currentUsername);
-    }
-    
-    const { data: votes, error } = await query;
-
-    if (error) {
-      console.error('Error loading votes:', error);
+    if (allVotesError) {
+      console.error('Error loading all votes:', allVotesError);
       return;
     }
 
-    // Only update if vote count changed
-    if (votes.length === lastVoteCount) return;
-    lastVoteCount = votes.length;
+    // Store all votes for info mode
+    currentVotes = allVotes;
 
-    // Store current votes for tooltips
-    currentVotes = votes;
+    // Load filtered votes for display (if showing only my votes)
+    let displayVotes = allVotes;
+    if (showMyVotesOnly && currentUsername) {
+      displayVotes = allVotes.filter(vote => vote.username === currentUsername);
+    }
+
+    // Only update if vote count changed
+    if (displayVotes.length === lastVoteCount) return;
+    lastVoteCount = displayVotes.length;
 
     // Update vote counter
-    updateVoteCounter(votes);
+    updateVoteCounter(displayVotes);
 
-    const voteCounts = getVoteCounts(votes);
+    const voteCounts = getVoteCounts(displayVotes);
     const maxVotes = Math.max(...Object.values(voteCounts), 0);
 
     // Batch style updates for better performance
@@ -795,7 +795,11 @@ function showLoadingIndicator(show) {
 function showInfoPanel(parcelId) {
   if (!infoModeEnabled) return;
   
+  console.log('Info mode - currentVotes:', currentVotes);
+  console.log('Info mode - parcelId:', parcelId);
+  
   const parcelVotes = currentVotes.filter(vote => vote.parcel_id === parcelId);
+  console.log('Info mode - parcelVotes:', parcelVotes);
   
   // Create overlay
   const overlay = document.createElement('div');
