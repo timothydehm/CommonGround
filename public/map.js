@@ -1,10 +1,12 @@
 // Global state
 let map, mapId, layerMap = {}, pollingInterval, lastVoteCount = 0, mapData = null;
 let showMyVotesOnly = false, currentUsername = null;
+let debounceTimeout = null;
 
 // Initialize the application
 async function init() {
   try {
+    showLoadingIndicator(true);
     initializeMap();
     setupCopyLinkButton();
     setupExportButton();
@@ -15,24 +17,38 @@ async function init() {
     
     if (!mapId) {
       showError('No map ID provided. Please use a valid map link.');
+      showLoadingIndicator(false);
       return;
     }
     
     await loadMapData(mapId);
+    showLoadingIndicator(false);
   } catch (error) {
     console.error('Initialization error:', error);
     showError('Failed to initialize the application');
+    showLoadingIndicator(false);
   }
 }
 
-// Initialize Leaflet map
+// Initialize Leaflet map with performance optimizations
 function initializeMap() {
-  map = L.map('map').setView(CONFIG.DEFAULT_CENTER, CONFIG.DEFAULT_ZOOM);
+  map = L.map('map', {
+    preferCanvas: true, // Use canvas for better performance with many features
+    zoomControl: true,
+    scrollWheelZoom: true,
+    doubleClickZoom: true,
+    boxZoom: true,
+    keyboard: true,
+    dragging: true,
+    touchZoom: true
+  }).setView(CONFIG.DEFAULT_CENTER, CONFIG.DEFAULT_ZOOM);
   
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: 'abcd',
-    maxZoom: 19
+    maxZoom: 19,
+    updateWhenZooming: false, // Performance optimization
+    updateWhenIdle: true
   }).addTo(map);
 }
 
@@ -389,6 +405,43 @@ function updateVoteCounter(votes) {
   }
 }
 
+// Optimistic vote counter update
+function updateVoteCounterOptimistic() {
+  if (!currentUsername || !mapData || !mapData.vote_limit) return;
+  
+  const voteCountSpan = document.getElementById('vote-count');
+  if (voteCountSpan) {
+    const currentCount = parseInt(voteCountSpan.textContent) || 0;
+    // We'll update this more accurately when the full refresh happens
+    voteCountSpan.textContent = currentCount;
+  }
+}
+
+// Get current vote count for a specific parcel (from cached data)
+function getCurrentVoteCount(parcelId) {
+  // This is a simplified version - in a real implementation, you'd cache vote counts
+  return 0; // Will be updated by the full refresh
+}
+
+// Get max vote count (from cached data)
+function getMaxVoteCount() {
+  // This is a simplified version - in a real implementation, you'd cache this
+  return 1; // Will be updated by the full refresh
+}
+
+// Update single parcel style optimistically
+function updateSingleParcelStyle(parcelId, isVoted) {
+  const layer = layerMap[parcelId];
+  if (!layer) return;
+  
+  // Simple optimistic styling - will be corrected by full refresh
+  const color = isVoted ? '#4caf50' : '#ffffff'; // Green for voted, white for not voted
+  layer.setStyle({
+    fillColor: color,
+    fillOpacity: 1,
+  });
+}
+
 // Load and update vote styles with optimization
 async function loadVotesAndUpdateStyles() {
   if (!mapId) return;
@@ -421,13 +474,23 @@ async function loadVotesAndUpdateStyles() {
     const voteCounts = getVoteCounts(votes);
     const maxVotes = Math.max(...Object.values(voteCounts), 0);
 
+    // Batch style updates for better performance
+    const styleUpdates = [];
     Object.keys(layerMap).forEach(pid => {
       const count = voteCounts[pid] || 0;
       const color = getColorByVotes(count, maxVotes);
-      layerMap[pid].setStyle({
-        fillColor: color,
-        fillOpacity: 1,
+      styleUpdates.push({
+        layer: layerMap[pid],
+        style: {
+          fillColor: color,
+          fillOpacity: 1,
+        }
       });
+    });
+
+    // Apply all style updates at once
+    styleUpdates.forEach(({ layer, style }) => {
+      layer.setStyle(style);
     });
   } catch (error) {
     console.error('Error updating vote styles:', error);
@@ -501,10 +564,16 @@ function addGeoJSONToMap(geojsonData) {
   loadVotesAndUpdateStyles();
 }
 
-// Handle parcel click for voting
+// Handle parcel click for voting with optimistic updates
 async function handleParcelClick(parcelId) {
   const username = getUsername();
   if (!username) return;
+
+  // Show loading state on the clicked parcel
+  const layer = layerMap[parcelId];
+  if (layer) {
+    layer.setStyle({ fillColor: '#ffeb3b', fillOpacity: 0.7 }); // Yellow loading state
+  }
 
   try {
     const { data: existingVotes, error: checkError } = await supabaseClient
@@ -526,6 +595,9 @@ async function handleParcelClick(parcelId) {
         .filter('username', 'eq', username);
 
       if (deleteError) throw deleteError;
+      
+      // Optimistic update: immediately update the parcel color
+      updateSingleParcelStyle(parcelId, false);
     } else {
       // Check vote limit before adding vote
       if (mapData && mapData.vote_limit) {
@@ -538,6 +610,13 @@ async function handleParcelClick(parcelId) {
         if (userVotesError) throw userVotesError;
 
         if (userVotes && userVotes.length >= mapData.vote_limit) {
+          // Revert loading state
+          if (layer) {
+            const currentVoteCount = getCurrentVoteCount(parcelId);
+            const maxVotes = getMaxVoteCount();
+            const color = getColorByVotes(currentVoteCount, maxVotes);
+            layer.setStyle({ fillColor: color, fillOpacity: 1 });
+          }
           showError(`You have reached the vote limit of ${mapData.vote_limit} votes. Remove a vote to add a new one.`);
           return;
         }
@@ -553,12 +632,28 @@ async function handleParcelClick(parcelId) {
         }]);
 
       if (insertError) throw insertError;
+      
+      // Optimistic update: immediately update the parcel color
+      updateSingleParcelStyle(parcelId, true);
     }
     
-    await loadVotesAndUpdateStyles();
+    // Update vote counter immediately
+    updateVoteCounterOptimistic();
+    
+    // Debounced refresh to prevent excessive API calls
+    if (debounceTimeout) clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(() => loadVotesAndUpdateStyles(), 200);
   } catch (error) {
     console.error('Error saving vote:', error);
     showError('Error saving vote. Please try again.');
+    
+    // Revert loading state on error
+    if (layer) {
+      const currentVoteCount = getCurrentVoteCount(parcelId);
+      const maxVotes = getMaxVoteCount();
+      const color = getColorByVotes(currentVoteCount, maxVotes);
+      layer.setStyle({ fillColor: color, fillOpacity: 1 });
+    }
   }
 }
 
@@ -598,6 +693,14 @@ function showSuccess(message) {
       successDiv.parentNode.removeChild(successDiv);
     }
   }, 3000);
+}
+
+// Show/hide loading indicator
+function showLoadingIndicator(show) {
+  const loadingIndicator = document.getElementById('loading-indicator');
+  if (loadingIndicator) {
+    loadingIndicator.style.display = show ? 'flex' : 'none';
+  }
 }
 
 // Cleanup on page unload

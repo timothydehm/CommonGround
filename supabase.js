@@ -2,7 +2,7 @@
 const CONFIG = {
   SUPABASE_URL: 'https://ziidawfildpacymfddqh.supabase.co',
   SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppaWRhd2ZpbGRwYWN5bWZkZHFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk5MzM0NzQsImV4cCI6MjA2NTUwOTQ3NH0.AsyZJu6fcpvGDhHqak37q1LV4VDmfPvyDLDaU3b1tR4',
-  POLLING_INTERVAL: 10000, // Increased to reduce server load
+  POLLING_INTERVAL: 3000, // Reduced for better responsiveness
   DEFAULT_CENTER: [41.50, -81.60],
   DEFAULT_ZOOM: 13
 };

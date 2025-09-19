@@ -6,6 +6,8 @@
   <title>Voting Map</title>
   <link rel="stylesheet" href="style.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+
 </head>
 <body>
   <div class="nav">
@@ -22,6 +24,10 @@
     <p id="map-prompt"></p>
     <div id="vote-counter" style="display: none;">
       <span id="vote-count">0</span> / <span id="vote-limit">∞</span> votes used
+    </div>
+    <div id="loading-indicator" style="display: none;">
+      <div class="loading-spinner"></div>
+      <span>Loading map...</span>
     </div>
   </div>
   <div id="map"></div>
